@@ -3,7 +3,7 @@ pipeline {
 
 stage('Checkout') {
   steps {
-    git branch: 'main', url: 'https://github.com/kamran0huseynov/wordpress-6.4.5.git'
+    git branch: 'main', url: 'https://github.com/kamran0huseynov/DVWA'
   }
 }
 
