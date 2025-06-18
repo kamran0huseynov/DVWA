@@ -1,23 +1,43 @@
 pipeline {
     agent any
 
-stage('Checkout') {
-  steps {
-    git branch: 'main', url: 'https://github.com/kamran0huseynov/DVWA'
-  }
-}
-
-
-        stage('Docker ilə WordPress işə sal') {
+    stages {
+        stage('Checkout') {
             steps {
-                sh '''
-                docker run -d --rm --name wp-pipeline \
-                -v $WORKSPACE:/var/www/html \
-                -p 8085:80 \
-                wordpress:php8.1-apache
-                '''
+                git branch: 'main', url: 'https://github.com/kamran0huseynov/DVWA'
+            }
+        }
+
+        stage('Start DVWA and MySQL') {
+            steps {
+                script {
+                    sh '''
+                    docker network create dvwa-net || true
+
+                    docker rm -f dvwa-mysql || true
+                    docker run -d --name dvwa-mysql --network dvwa-net \
+                        -e MYSQL_ROOT_PASSWORD=p@ssw0rd \
+                        -e MYSQL_DATABASE=dvwa \
+                        -e MYSQL_USER=dvwa \
+                        -e MYSQL_PASSWORD=p@ssw0rd \
+                        mysql:5.7
+
+                    docker rm -f dvwa-web || true
+                    docker run -d --name dvwa-web --network dvwa-net \
+                        -v "$WORKSPACE:/var/www/html" \
+                        -p 8085:80 \
+                        php:8.1-apache
+
+                    docker exec dvwa-web bash -c "docker-php-ext-install mysqli && apache2ctl restart"
+                    '''
+                }
             }
         }
     }
-}
 
+    post {
+        always {
+            echo 'DVWA containers started.'
+        }
+    }
+}
